@@ -15,6 +15,8 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.ResourceBundle;
 import java.util.ResourceBundle.Control;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.adbhelper.adb.exceptions.AdbError;
 import com.adbhelper.adb.exceptions.DeviceNotAvailableException;
@@ -33,6 +35,9 @@ import com.adbhelper.adb.shell.AdbShell;
 
 public class AdbModule implements AdbConsts {
 
+	private static final int PACKAGE_NAME_PATTERN_GROUP = 2;
+	private static final int PACKAGE_FILE_PATTERN_GROUP = 1;
+	private static final Pattern PACKAGE_PATTERN = Pattern.compile("(?:package:)?(.*)=(.*)");
 
 	public static final String VERSION_ADB_HELPER = "%%VERSION_CORE%%";
 	private static final String NAME_RESOURCE_LABELS_PERMISSIONS = "com.adbhelper.adb.permissions";
@@ -532,13 +537,19 @@ public class AdbModule implements AdbConsts {
 			if (result[i].equals("")) {
 				continue;
 			}
-			String[] tmp = result[i].replaceAll(".*:", "").split("=");
-			if (tmp.length < 2) {
+			
+			Matcher matcher = PACKAGE_PATTERN.matcher(result[i]);
+			if (!matcher.matches()) {
 				continue;
 			}
+			String fileName = matcher.group(PACKAGE_FILE_PATTERN_GROUP);
+			String packageName = matcher.group(PACKAGE_NAME_PATTERN_GROUP);
 			if ((fileIgnoreFilter == null)
-					|| (!tmp[0].matches(fileIgnoreFilter)))
-				packages.add(new AdbPackage(this, tmp[1], tmp[0], device));
+					|| (!fileName.matches(fileIgnoreFilter))) {
+				packages.add(
+						new AdbPackage(this, packageName, fileName, device));
+			}
+			
 		}
 		logAdb.info(LOG_COUNT_PACKAGES, packages.size());
 		// logAdb.info(LOG_END_LIST_PACKAGES);
